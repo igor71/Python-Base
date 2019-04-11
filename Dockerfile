@@ -1,19 +1,34 @@
 FROM buildpack-deps:stretch
 
-# ensure local python is preferred over distribution python
-ENV PATH /usr/local/bin:$PATH
+MAINTAINER Igor Rabkin <igor.rabkin@xiaoyi.com>
 
+
+#################################################
+#     Python 3.6 installations for dev          #
+#################################################
+
+ENV PYTHON_VERSION=3.6.8
+# If this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
+ENV PYTHON_PIP_VERSION 19.0.3
+# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK, fixing...
 # http://bugs.python.org/issue19846
-# > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
 ENV LANG C.UTF-8
 
-# extra dependencies (over what buildpack-deps already includes)
+# Ensure local python is preferred over distribution python
+ENV PATH /usr/local/bin:$PATH
+
+# Extra dependencies & python installation
 RUN apt-get update && apt-get install -y --no-install-recommends \
-		tk-dev \
+	tk-dev \
+	libpq-dev \
+	libssl-dev \
+	openssl \
+	libffi-dev \
+	zlib1g-dev \
+	libsqlite3-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV GPG_KEY 0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D
-ENV PYTHON_VERSION 3.6.8
 
 RUN set -ex \
 	\
@@ -51,16 +66,17 @@ RUN set -ex \
 	\
 	&& python3 --version
 
-# make some useful symlinks that are expected to exist
+# Make some useful symlinks that are expected to exist
 RUN cd /usr/local/bin \
-	&& ln -s idle3 idle \
+        && ln -s idle3 idle \
 	&& ln -s pydoc3 pydoc \
 	&& ln -s python3 python \
+	&& ln -s /usr/local/bin/python3.6 /usr/bin/python3.6.8 \
 	&& ln -s python3-config python-config
-
-# if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-
-ENV PYTHON_PIP_VERSION 19.0.3
+	
+##################################	
+# Installing PIP and Dependences #
+##################################	
 
 RUN set -ex; \
 	\
@@ -80,5 +96,3 @@ RUN set -ex; \
 			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' \) \) \
 		\) -exec rm -rf '{}' +; \
 	rm -f get-pip.py
-
-CMD ["python3"]
